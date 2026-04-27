@@ -35,14 +35,9 @@ function fmt(iso: string) {
   })
 }
 
-function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-}
-
 export default function StopTimeline({ result }: Props) {
   const { stops, waypoints, trip_summary } = result
 
-  // Build full event list: start + stops + end
   const events = [
     {
       type: 'start',
@@ -50,9 +45,9 @@ export default function StopTimeline({ result }: Props) {
       icon: '🚛',
       color: '#00E5A0',
       location: `${waypoints.current.lat.toFixed(3)}, ${waypoints.current.lng.toFixed(3)}`,
-      time: new Date(stops[0]?.arrival_time).toISOString(),
+      time: stops[0]?.arrival_time ?? trip_summary.estimated_arrival,
       detail: 'Trip begins',
-      duration: null,
+      duration: null as number | null,
     },
     ...stops.map((s: Stop) => ({
       type: s.type,
@@ -62,7 +57,7 @@ export default function StopTimeline({ result }: Props) {
       location: `${s.location.lat.toFixed(3)}, ${s.location.lng.toFixed(3)}`,
       time: s.arrival_time,
       detail: s.notes,
-      duration: s.duration_hours,
+      duration: s.duration_hours as number | null,
     })),
     {
       type: 'end',
@@ -72,7 +67,7 @@ export default function StopTimeline({ result }: Props) {
       location: `${waypoints.dropoff.lat.toFixed(3)}, ${waypoints.dropoff.lng.toFixed(3)}`,
       time: trip_summary.estimated_arrival,
       detail: 'Trip complete',
-      duration: null,
+      duration: null as number | null,
     },
   ]
 
@@ -85,29 +80,21 @@ export default function StopTimeline({ result }: Props) {
         </p>
 
         <div className="relative">
-          {/* Vertical line */}
           <div className="absolute left-6 top-0 bottom-0 w-px bg-border" />
-
           <div className="flex flex-col gap-0">
             {events.map((event, idx) => (
               <div key={idx} className="flex gap-4 relative">
-                {/* Icon circle */}
                 <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-lg flex-shrink-0 z-10 border-2 border-ink"
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-lg flex-shrink-0 z-10 border-2"
                   style={{ background: event.color + '22', borderColor: event.color }}
                 >
                   {event.icon}
                 </div>
-
-                {/* Content */}
                 <div className="flex-1 pb-6">
                   <div className="bg-stripe border border-border rounded-lg p-4">
                     <div className="flex items-start justify-between gap-3 mb-2">
                       <div>
-                        <span
-                          className="text-xs font-mono font-bold tracking-widest"
-                          style={{ color: event.color }}
-                        >
+                        <span className="text-xs font-mono font-bold tracking-widest" style={{ color: event.color }}>
                           {event.label}
                         </span>
                         <p className="text-paper text-sm mt-0.5">{event.location}</p>
@@ -135,12 +122,11 @@ export default function StopTimeline({ result }: Props) {
           </div>
         </div>
 
-        {/* Summary */}
         <div className="mt-4 grid grid-cols-3 gap-3">
           {[
             { label: 'Total Drive', value: `${trip_summary.total_driving_hours.toFixed(1)}h` },
-            { label: 'Fuel Stops', value: `${trip_summary.fuel_stops}` },
-            { label: 'Rest Stops', value: `${trip_summary.rest_stops}` },
+            { label: 'Fuel Stops',  value: `${trip_summary.fuel_stops}` },
+            { label: 'Rest Stops',  value: `${trip_summary.rest_stops}` },
           ].map(item => (
             <div key={item.label} className="bg-stripe border border-border rounded-lg p-3 text-center">
               <div className="text-amber font-mono text-lg">{item.value}</div>
