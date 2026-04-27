@@ -5,22 +5,25 @@ import dynamic from 'next/dynamic'
 import { calculateTrip, TripInput, TripResult } from '@/lib/api'
 import ELDLogComponent from '@/components/ELDLogComponent'
 
-// Load MapComponent dynamically to avoid SSR issues with Leaflet
-const MapComponent = dynamic(() => import('@/components/MapComponent'), { 
+const MapComponent = dynamic(() => import('@/components/MapComponent'), {
   ssr: false,
-  loading: () => <div className="h-full w-full flex items-center justify-center bg-ink text-white/20">Initializing Tactical Systems...</div>
+  loading: () => (
+    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#EDEAE3', color: '#7A7670', fontSize: 13, letterSpacing: '0.08em', fontFamily: 'DM Sans, sans-serif' }}>
+      Initialising map…
+    </div>
+  ),
 })
 
 export default function Home() {
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<TripResult | null>(null)
-  
+  const [error, setError]     = useState<string | null>(null)
+  const [result, setResult]   = useState<TripResult | null>(null)
+
   const [inputs, setInputs] = useState<TripInput>({
-    current_location: 'Chicago, IL',
-    pickup_location: 'St. Louis, MO',
-    dropoff_location: 'Dallas, TX',
-    current_cycle_used: 0
+    current_location:    'Chicago, IL',
+    pickup_location:     'St. Louis, MO',
+    dropoff_location:    'Dallas, TX',
+    current_cycle_used:  0,
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,154 +40,338 @@ export default function Home() {
     }
   }
 
+  const hasResult = !!result
+
   return (
-    <main className="relative h-screen w-full flex overflow-hidden">
-      {/* Sidebar Command Center */}
-      <aside className="w-96 h-full glass-panel z-50 flex flex-col p-8 border-r border-white/10 overflow-y-auto shrink-0">
-        <div className="mb-12">
-          <h1 className="text-3xl font-bold tracking-tighter text-amber mb-1">HAULPATH</h1>
-          <p className="text-xs text-white/40 uppercase tracking-widest font-mono">ELD Strategic Router v1.0</p>
+    <main
+      style={{
+        minHeight: '100vh',
+        width: '100%',
+        background: 'var(--paper)',
+        display: 'flex',
+        alignItems: hasResult ? 'flex-start' : 'center',
+        justifyContent: hasResult ? 'flex-start' : 'center',
+        transition: 'all 0.45s cubic-bezier(0.4,0,0.2,1)',
+        overflowX: 'hidden',
+      }}
+    >
+      {/* ── Sidebar / Form ───────────────────────────────── */}
+      <aside
+        style={{
+          width: 340,
+          minWidth: 340,
+          minHeight: hasResult ? '100vh' : undefined,
+          background: 'var(--surface)',
+          borderRight: hasResult ? '1px solid var(--border)' : 'none',
+          borderRadius: hasResult ? 0 : 16,
+          boxShadow: hasResult
+            ? '2px 0 16px rgba(0,0,0,0.06)'
+            : '0 4px 32px rgba(0,0,0,0.10)',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '36px 28px',
+          gap: 0,
+          zIndex: 50,
+          transition: 'border-radius 0.45s, box-shadow 0.45s, min-height 0.45s',
+          overflowY: 'auto',
+        }}
+      >
+        {/* Logo */}
+        <div style={{ marginBottom: 36 }}>
+          <h1
+            style={{
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontSize: 34,
+              fontWeight: 800,
+              letterSpacing: '0.04em',
+              color: 'var(--strong)',
+              lineHeight: 1,
+              margin: 0,
+            }}
+          >
+            HAUL<span style={{ color: 'var(--amber)' }}>PATH</span>
+          </h1>
+          <p
+            style={{
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              color: 'var(--muted)',
+              marginTop: 6,
+            }}
+          >
+            ELD Strategic Router v1.0
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 flex-1">
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs uppercase text-white/40 font-semibold mb-2 block">Origin</label>
-              <input 
-                type="text" 
-                className="input-field" 
-                value={inputs.current_location}
-                onChange={e => setInputs({...inputs, current_location: e.target.value})}
-                placeholder="Current Location"
-              />
-            </div>
-            <div>
-              <label className="text-xs uppercase text-white/40 font-semibold mb-2 block">Pickup</label>
-              <input 
-                type="text" 
-                className="input-field" 
-                value={inputs.pickup_location}
-                onChange={e => setInputs({...inputs, pickup_location: e.target.value})}
-                placeholder="Pickup Location"
-              />
-            </div>
-            <div>
-              <label className="text-xs uppercase text-white/40 font-semibold mb-2 block">Destination</label>
-              <input 
-                type="text" 
-                className="input-field" 
-                value={inputs.dropoff_location}
-                onChange={e => setInputs({...inputs, dropoff_location: e.target.value})}
-                placeholder="Dropoff Location"
-              />
-            </div>
-            <div>
-              <label className="text-xs uppercase text-white/40 font-semibold mb-2 block">Used Cycle (Hours)</label>
-              <input 
-                type="number" 
-                step="0.1"
-                className="input-field" 
-                value={inputs.current_cycle_used}
-                onChange={e => setInputs({...inputs, current_cycle_used: parseFloat(e.target.value) || 0})}
-              />
-            </div>
+        {/* Form */}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18, flex: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {[
+              { label: 'Origin',              key: 'current_location',   placeholder: 'e.g. Chicago, IL',   type: 'text' },
+              { label: 'Pickup',              key: 'pickup_location',    placeholder: 'e.g. St. Louis, MO', type: 'text' },
+              { label: 'Destination',         key: 'dropoff_location',   placeholder: 'e.g. Dallas, TX',    type: 'text' },
+              { label: 'Used Cycle (Hours)',  key: 'current_cycle_used', placeholder: '0',                  type: 'number' },
+            ].map(({ label, key, placeholder, type }) => (
+              <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                <label
+                  style={{
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    color: 'var(--muted)',
+                    display: 'block',
+                  }}
+                >
+                  {label}
+                </label>
+                <input
+                  className="input-field"
+                  type={type}
+                  step={type === 'number' ? '0.1' : undefined}
+                  placeholder={placeholder}
+                  value={(inputs as any)[key]}
+                  onChange={e =>
+                    setInputs({ ...inputs, [key]: type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value })
+                  }
+                />
+              </div>
+            ))}
           </div>
 
-          <button type="submit" disabled={loading} className="btn-primary">
-            {loading ? 'Calculating Path...' : 'Compute Route'}
+          <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: 8 }}>
+            {loading ? 'Calculating…' : 'Compute Route'}
           </button>
         </form>
 
+        {/* Error */}
         {error && (
-          <div className="mt-4 p-4 bg-error/10 border border-error/20 rounded text-error text-xs">
+          <div
+            style={{
+              marginTop: 16,
+              padding: '12px 14px',
+              background: '#FDEAEA',
+              border: '1px solid #EFB0B0',
+              borderRadius: 8,
+              color: 'var(--error)',
+              fontSize: 13,
+              lineHeight: 1.5,
+            }}
+          >
             {error}
           </div>
         )}
 
-        <div className="mt-auto pt-8 border-t border-white/5 text-[10px] font-mono text-white/20">
-          SYSTEM STATUS: {loading ? 'COMPUTING' : 'IDLE'} // HOS_ENGINE: READY
+        {/* Footer status */}
+        <div
+          style={{
+            marginTop: 'auto',
+            paddingTop: 24,
+            borderTop: '1px solid var(--border)',
+            fontSize: 10,
+            fontFamily: "'DM Sans', sans-serif",
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: 'var(--muted)',
+          }}
+        >
+          Status:{' '}
+          <span style={{ color: loading ? 'var(--amber)' : 'var(--signal)', fontWeight: 600 }}>
+            {loading ? 'COMPUTING' : 'IDLE'}
+          </span>
+          {' '}// HOS Engine:{' '}
+          <span style={{ color: 'var(--signal)', fontWeight: 600 }}>READY</span>
         </div>
       </aside>
 
-      {/* Main View Area (Map & Logs Placeholder) */}
-      <section className="flex-1 relative bg-[#050505] overflow-y-auto">
-        {!result && !loading && (
-          <div className="absolute inset-0 flex items-center justify-center text-white/10 select-none">
-            <div className="text-center">
-              <div className="text-8xl font-bold mb-4">HAULPATH</div>
-              <p className="text-sm tracking-widest uppercase">Awaiting flight coordinates</p>
+      {/* ── Results panel ────────────────────────────────── */}
+      {loading && !result && (
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '100vh',
+          }}
+        >
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              border: '3px solid var(--border)',
+              borderTopColor: 'var(--amber)',
+              borderRadius: '50%',
+              animation: 'spin 0.75s linear infinite',
+            }}
+          />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      )}
+
+      {result && (
+        <section
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            minHeight: '100vh',
+            padding: '40px 36px',
+            background: 'var(--paper)',
+          }}
+        >
+          {/* ── Stats row ── */}
+          <div style={{ marginBottom: 32 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 20,
+              }}
+            >
+              <h2
+                style={{
+                  fontFamily: "'Barlow Condensed', sans-serif",
+                  fontSize: 26,
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  color: 'var(--signal)',
+                  textTransform: 'uppercase',
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                }}
+              >
+                <span
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    background: 'var(--signal)',
+                    display: 'inline-block',
+                    flexShrink: 0,
+                  }}
+                />
+                Route Computed
+              </h2>
+              <button
+                onClick={() => window.print()}
+                style={{
+                  padding: '8px 18px',
+                  background: '#fff',
+                  border: '1.5px solid var(--border)',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontWeight: 600,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'var(--muted)',
+                  cursor: 'pointer',
+                }}
+                className="print:hidden"
+              >
+                Export PDF
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+              {[
+                { label: 'Distance',   value: `${result.trip_summary.total_distance_miles.toFixed(1)} mi` },
+                { label: 'Drive Time', value: `${result.trip_summary.total_driving_hours.toFixed(1)} hr` },
+                { label: 'Stops',      value: `${result.trip_summary.fuel_stops + result.trip_summary.rest_stops}` },
+                { label: 'ETA',        value: new Date(result.trip_summary.estimated_arrival).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) },
+              ].map(({ label, value }) => (
+                <div
+                  key={label}
+                  style={{
+                    background: '#fff',
+                    border: '1px solid var(--border)',
+                    borderRadius: 10,
+                    padding: '14px 16px',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 600,
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase',
+                      color: 'var(--muted)',
+                      marginBottom: 6,
+                    }}
+                  >
+                    {label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 22,
+                      fontFamily: "'Barlow Condensed', sans-serif",
+                      fontWeight: 700,
+                      color: 'var(--strong)',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {value}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        )}
 
-        {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-ink/50 backdrop-blur-sm z-40">
-             <div className="w-12 h-12 border-4 border-amber border-t-transparent rounded-full animate-spin"></div>
+          {/* ── Map ── */}
+          <div
+            style={{
+              height: 460,
+              borderRadius: 12,
+              overflow: 'hidden',
+              border: '1px solid var(--border)',
+              marginBottom: 40,
+            }}
+            className="print:hidden"
+          >
+            <MapComponent result={result} />
           </div>
-        )}
 
-        {result && (
-          <div className="h-full flex flex-col p-8 space-y-8">
-             {/* Stats Header */}
-             <div className="shrink-0">
-               <div className="flex justify-between items-center mb-6">
-                 <h2 className="text-2xl font-bold text-signal flex items-center gap-3">
-                   <span className="w-3 h-3 bg-signal rounded-full shadow-[0_0_10px_#10b981]"></span>
-                   COMPUTATION COMPLETE
-                 </h2>
-                 <button 
-                   onClick={() => window.print()}
-                   className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-xs font-mono hover:bg-white/10 transition-all uppercase tracking-widest print:hidden"
-                 >
-                   Export Logs (PDF)
-                 </button>
-               </div>
-               
-               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                 <div className="glass-panel p-4 rounded-lg">
-                   <div className="text-[10px] text-white/30 uppercase mb-1 font-mono">Distance</div>
-                   <div className="text-xl font-bold">{result.trip_summary.total_distance_miles.toFixed(1)} <span className="text-xs font-normal opacity-50">mi</span></div>
-                 </div>
-                 <div className="glass-panel p-4 rounded-lg">
-                   <div className="text-[10px] text-white/30 uppercase mb-1 font-mono">Drive Time</div>
-                   <div className="text-xl font-bold">{result.trip_summary.total_driving_hours.toFixed(1)} <span className="text-xs font-normal opacity-50">hr</span></div>
-                 </div>
-                 <div className="glass-panel p-4 rounded-lg">
-                   <div className="text-[10px] text-white/30 uppercase mb-1 font-mono">Stops</div>
-                   <div className="text-xl font-bold">{result.trip_summary.fuel_stops + result.trip_summary.rest_stops} <span className="text-xs font-normal opacity-50">events</span></div>
-                 </div>
-                 <div className="glass-panel p-4 rounded-lg border-amber/20">
-                   <div className="text-[10px] text-amber/40 uppercase mb-1 font-mono">ETA</div>
-                   <div className="text-lg font-bold text-amber">
-                     {new Date(result.trip_summary.estimated_arrival).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                   </div>
-                 </div>
-               </div>
-             </div>
-
-             {/* Main Scrollable Content */}
-             <div className="flex-1 space-y-12">
-               {/* Map Visualization */}
-               <div className="h-[500px] glass-panel rounded-xl overflow-hidden border border-white/5 relative shadow-2xl print:hidden">
-                 <MapComponent result={result} />
-               </div>
-
-               {/* ELD Log Sheets */}
-               <div className="space-y-8 pb-12">
-                 <div className="flex items-center gap-4">
-                   <h2 className="text-xl font-bold text-paper/80 uppercase tracking-widest font-mono">
-                     Compliance Output
-                   </h2>
-                   <div className="h-[1px] flex-1 bg-white/10"></div>
-                 </div>
-                 {result.daily_logs.map((log, i) => (
-                   <ELDLogComponent key={i} log={log} />
-                 ))}
-               </div>
-             </div>
+          {/* ── ELD Logs ── */}
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 16,
+                marginBottom: 24,
+              }}
+            >
+              <h2
+                style={{
+                  fontFamily: "'Barlow Condensed', sans-serif",
+                  fontSize: 22,
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'var(--strong)',
+                  margin: 0,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Compliance Logs
+              </h2>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 48 }}>
+              {result.daily_logs.map((log, i) => (
+                <ELDLogComponent key={i} log={log} />
+              ))}
+            </div>
           </div>
-        )}
-      </section>
+        </section>
+      )}
     </main>
   )
 }

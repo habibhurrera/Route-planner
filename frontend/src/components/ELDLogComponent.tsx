@@ -2,37 +2,35 @@
 
 import { DailyLog } from '@/lib/api'
 
-const STATUS_Y = {
+const STATUS_Y: Record<string, number> = {
   off_duty: 20,
-  sleeper: 50,
-  driving: 80,
-  on_duty: 110,
+  sleeper:  50,
+  driving:  80,
+  on_duty:  110,
 }
 
 export default function ELDLogComponent({ log }: { log: DailyLog }) {
-  const width = 800
-  const height = 130
+  const width     = 800
+  const height    = 130
   const hourWidth = width / 24
 
   const getX = (isoString: string) => {
-    const date = new Date(isoString)
-    // Use UTC hours to match backend midnight-to-midnight logic
+    const date  = new Date(isoString)
     const hours = date.getUTCHours() + date.getUTCMinutes() / 60
     return hours * hourWidth
   }
 
-  // Build the path points
-  let pathD = ""
+  let pathD = ''
   if (log.duty_periods.length > 0) {
     log.duty_periods.forEach((period, idx) => {
       const xStart = Math.max(0, getX(period.start_time))
-      const xEnd = Math.min(width, getX(period.end_time))
-      const y = STATUS_Y[period.status] || 20
+      const xEnd   = Math.min(width, getX(period.end_time))
+      const y      = STATUS_Y[period.status] ?? 20
 
       if (idx === 0) {
         pathD += `M ${xStart} ${y} `
       } else {
-        const prevY = STATUS_Y[log.duty_periods[idx-1].status] || 20
+        const prevY = STATUS_Y[log.duty_periods[idx - 1].status] ?? 20
         pathD += `L ${xStart} ${prevY} L ${xStart} ${y} `
       }
       pathD += `L ${xEnd} ${y} `
@@ -40,73 +38,199 @@ export default function ELDLogComponent({ log }: { log: DailyLog }) {
   }
 
   return (
-    <div className="glass-panel p-6 rounded-xl border border-white/10 mb-8 last:mb-0 bg-white/[0.01]">
-      <div className="flex justify-between items-end mb-6">
+    <div
+      style={{
+        background: '#fff',
+        border: '1px solid var(--border)',
+        borderRadius: 12,
+        padding: '24px 24px 20px',
+      }}
+    >
+      {/* Header row */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
+          marginBottom: 20,
+          gap: 16,
+        }}
+      >
         <div>
-          <h3 className="text-amber font-mono text-sm font-bold uppercase tracking-widest flex items-center gap-2">
-            <span className="w-2 h-2 bg-amber rounded-full animate-pulse"></span>
-            Daily Log Sheet // Day {log.day_number}
+          <h3
+            style={{
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontSize: 18,
+              fontWeight: 700,
+              letterSpacing: '0.07em',
+              textTransform: 'uppercase',
+              color: 'var(--amber)',
+              margin: 0,
+              lineHeight: 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: 'var(--amber)',
+                display: 'inline-block',
+                flexShrink: 0,
+              }}
+            />
+            Day {log.day_number} Log Sheet
           </h3>
-          <p className="text-white/40 text-[10px] font-mono mt-1">{log.date} (UTC Cycle)</p>
+          <p
+            style={{
+              fontSize: 11,
+              color: 'var(--muted)',
+              fontWeight: 500,
+              letterSpacing: '0.06em',
+              marginTop: 6,
+              marginBottom: 0,
+            }}
+          >
+            {log.date} · UTC Cycle
+          </p>
         </div>
-        <div className="flex gap-6 text-[10px] font-mono">
-          <div className="text-right">
-            <span className="text-white/20 block mb-1">DRIVING</span>
-            <span className="text-signal font-bold text-sm leading-none">{log.total_drive_hours.toFixed(1)}h</span>
-          </div>
-          <div className="text-right">
-            <span className="text-white/20 block mb-1">ON-DUTY</span>
-            <span className="text-paper font-bold text-sm leading-none">{log.total_on_duty_hours.toFixed(1)}h</span>
-          </div>
-          <div className="text-right">
-            <span className="text-white/20 block mb-1">SLEEPER</span>
-            <span className="text-paper font-bold text-sm leading-none">{log.total_sleeper_hours.toFixed(1)}h</span>
-          </div>
+
+        <div style={{ display: 'flex', gap: 20 }}>
+          {[
+            { label: 'Driving',  value: log.total_drive_hours,    color: 'var(--signal)' },
+            { label: 'On-Duty',  value: log.total_on_duty_hours,  color: 'var(--strong)' },
+            { label: 'Sleeper',  value: log.total_sleeper_hours,  color: 'var(--muted)'  },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{ textAlign: 'right' }}>
+              <div
+                style={{
+                  fontSize: 9,
+                  fontWeight: 600,
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: 'var(--muted)',
+                  marginBottom: 3,
+                }}
+              >
+                {label}
+              </div>
+              <div
+                style={{
+                  fontFamily: "'Barlow Condensed', sans-serif",
+                  fontSize: 20,
+                  fontWeight: 700,
+                  color,
+                  lineHeight: 1,
+                }}
+              >
+                {value.toFixed(1)}h
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="relative overflow-x-auto pb-4 scrollbar-hide">
-        <svg width={width + 100} height={height + 40} className="overflow-visible ml-16">
-          {/* Grid Background */}
-          <rect width={width} height={height} fill="rgba(255,255,255,0.01)" stroke="rgba(255,255,255,0.1)" />
-          
-          {/* Status Lines and Labels */}
+      {/* SVG Chart */}
+      <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
+        <svg width={width + 100} height={height + 44} style={{ overflow: 'visible', marginLeft: 64 }}>
+          {/* Chart background */}
+          <rect
+            width={width}
+            height={height}
+            fill="#F7F5F0"
+            stroke="var(--border)"
+            strokeWidth={1}
+          />
+
+          {/* Status rows */}
           {Object.entries(STATUS_Y).map(([status, y]) => (
             <g key={status}>
-              <line x1={0} y1={y} x2={width} y2={y} stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
-              <text x={-10} y={y + 4} textAnchor="end" className="fill-white/30 text-[9px] font-mono uppercase font-bold">
-                {status.replace('_', ' ')}
+              <rect x={0} y={y - 15} width={width} height={30} fill={y % 60 === 20 ? 'rgba(0,0,0,0.015)' : 'transparent'} />
+              <line x1={0} y1={y} x2={width} y2={y} stroke="var(--border)" strokeDasharray="4 4" />
+              <text
+                x={-10}
+                y={y + 4}
+                textAnchor="end"
+                fill="var(--muted)"
+                fontSize={9}
+                fontFamily="'DM Sans', sans-serif"
+                fontWeight={600}
+                letterSpacing={0.5}
+              >
+                {status.replace('_', ' ').toUpperCase()}
               </text>
             </g>
           ))}
 
-          {/* Hour Markers */}
+          {/* Hour markers */}
           {Array.from({ length: 25 }).map((_, i) => (
             <g key={i}>
-              <line 
-                x1={i * hourWidth} 
-                y1={0} 
-                x2={i * hourWidth} 
-                y2={height} 
-                stroke={i % 6 === 0 ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.05)"} 
+              <line
+                x1={i * hourWidth}
+                y1={0}
+                x2={i * hourWidth}
+                y2={height}
+                stroke={i % 6 === 0 ? 'var(--border)' : 'rgba(0,0,0,0.06)'}
+                strokeWidth={i % 6 === 0 ? 1 : 0.5}
               />
-              <text x={i * hourWidth} y={height + 15} textAnchor="middle" className="fill-white/20 text-[8px] font-mono">
+              <text
+                x={i * hourWidth}
+                y={height + 16}
+                textAnchor="middle"
+                fill="var(--muted)"
+                fontSize={9}
+                fontFamily="'DM Sans', sans-serif"
+                fontWeight={500}
+              >
                 {i === 0 ? 'M' : i === 12 ? 'N' : i === 24 ? 'M' : i}
               </text>
             </g>
           ))}
 
-          {/* The Log Graph Line */}
-          <path d={pathD} fill="none" stroke="var(--amber)" strokeWidth="2.5" strokeLinejoin="round" />
+          {/* ELD line */}
+          <path
+            d={pathD}
+            fill="none"
+            stroke="var(--amber)"
+            strokeWidth={2.5}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
         </svg>
       </div>
 
+      {/* Remarks */}
       {log.remarks.length > 0 && (
-        <div className="mt-8 pt-4 border-t border-white/5">
-          <div className="text-[9px] text-white/20 font-mono uppercase mb-3 tracking-tighter">Duty Status Remarks</div>
-          <div className="flex flex-wrap gap-2">
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+          <div
+            style={{
+              fontSize: 9,
+              fontWeight: 600,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--muted)',
+              marginBottom: 10,
+            }}
+          >
+            Duty Status Remarks
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {log.remarks.map((remark, i) => (
-              <span key={i} className="text-[10px] font-mono bg-white/5 border border-white/10 px-3 py-1 rounded-full text-white/60">
+              <span
+                key={i}
+                style={{
+                  fontSize: 11,
+                  fontFamily: "'DM Sans', sans-serif",
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  padding: '4px 12px',
+                  borderRadius: 20,
+                  color: 'var(--strong)',
+                }}
+              >
                 {remark}
               </span>
             ))}
