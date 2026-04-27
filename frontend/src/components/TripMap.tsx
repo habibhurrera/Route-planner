@@ -73,7 +73,7 @@ export default function TripMap({ result }: Props) {
       })
       L.marker([wp.current.lat, wp.current.lng], { icon: currentIcon })
         .addTo(map)
-        .bindPopup(`<b style="color:#0A0A0F">Current Location</b><br>${wp.current.display_name || ''}`)
+        .bindPopup(`<b style="color:#0A0A0F">Current Location</b><br>Current Location`)
 
       // Draw stop markers
       result.stops.forEach((stop: Stop) => {
