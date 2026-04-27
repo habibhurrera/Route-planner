@@ -12,6 +12,7 @@ colorama==0.4.6
 cryptography==46.0.5
 Django==6.0.4
 django-cors-headers==4.9.0
+djangorestframework==3.17.1
 dnspython==2.8.0
 email-validator==2.3.0
 et_xmlfile==2.0.0
