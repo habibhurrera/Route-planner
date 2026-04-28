@@ -5,14 +5,24 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 export const apiClient = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 30000,
+  timeout: 90000, // 90s — Render free tier cold start can take ~50s
 })
+
+// Wake the Render backend before the real request so cold-start
+// doesn't eat into the user-facing timeout.
+export async function wakeBackend(): Promise<void> {
+  try {
+    await axios.get(`${API_BASE}/api/health/`, { timeout: 60000 })
+  } catch {
+    // Ignore — even a failed ping wakes the dyno
+  }
+}
 
 export interface TripInput {
   current_location: string
   pickup_location: string
   dropoff_location: string
-  current_cycle_used: number  // hours already used in 70hr/8day cycle
+  current_cycle_used: number
 }
 
 export interface Coordinates {
@@ -24,8 +34,8 @@ export interface Stop {
   type: 'pickup' | 'dropoff' | 'fuel' | 'rest_break' | 'sleeper'
   label: string
   location: Coordinates
-  arrival_time: string    // ISO string
-  departure_time: string  // ISO string
+  arrival_time: string
+  departure_time: string
   duration_hours: number
   notes: string
   cumulative_drive_hours: number
@@ -34,14 +44,14 @@ export interface Stop {
 
 export interface DutyPeriod {
   status: 'driving' | 'on_duty' | 'off_duty' | 'sleeper'
-  start_time: string  // ISO string
-  end_time: string    // ISO string
+  start_time: string
+  end_time: string
   duration_hours: number
   label: string
 }
 
 export interface DailyLog {
-  date: string          // YYYY-MM-DD
+  date: string
   day_number: number
   duty_periods: DutyPeriod[]
   total_drive_hours: number
@@ -54,7 +64,7 @@ export interface DailyLog {
 export interface RouteSegment {
   from: Coordinates
   to: Coordinates
-  geometry: [number, number][]  // [lng, lat] pairs from ORS
+  geometry: [number, number][]
   distance_miles: number
   duration_hours: number
 }
